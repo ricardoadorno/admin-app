@@ -13,16 +13,32 @@ jobs:
       - name: 📥 Checkout do código
         uses: actions/checkout@v3
 
-      run: |
-        echo ${{ secrets.EC2_SSH_PRIVATE_KEY }} > private_key && chmod 600 private_key
-        ssh -o StrictHostKeyChecking=no -i private_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+      - name: 🔑 Configurar chave SSH
+        run: |
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > private_key
+          chmod 600 private_key
 
-            # Now we have got the access of EC2 and we will start the deploy .
-            cd /home/ubuntu/admin-app &&
-            git pull origin main &&
-            sudo stop admin-app-container || true &&
-            sudo rm admin-app-container || true &&
-            sudo docker rmi admin-app:latest || true &&
-            docker build -t admin-app:latest . &&
-            docker run -d --name admin-app-container -p 3000:3000 admin-app:latest
-            '
+      - name: 🚀 Deploy para EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i private_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e  # Para interromper o script em caso de erro
+
+            echo "📂 Acessando diretório do projeto..."
+            cd /home/ubuntu/admin-app
+
+            echo "🔄 Atualizando repositório..."
+            git pull origin main
+
+            echo "🛑 Parando e removendo container antigo..."
+            sudo docker stop admin-app-container || true
+            sudo docker rm admin-app-container || true
+
+            echo "🧹 Removendo imagem antiga..."
+            sudo docker rmi admin-app:latest || true
+
+            echo "🐳 Construindo nova imagem..."
+            sudo docker build -t admin-app:latest .
+
+            echo "🚀 Subindo novo container..."
+            sudo docker run -d --name admin-app-container -p 3000:3000 admin-app:latest
+          EOF
