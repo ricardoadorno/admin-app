@@ -28,7 +28,7 @@ jobs:
             docker rmi admin-app:latest || true
 
             echo "📦 Build da nova imagem..."
-            cd /path/to/your/app
+            cd admin-app
             docker build -t admin-app:latest .
 
             echo "🚀 Subindo novo container..."
