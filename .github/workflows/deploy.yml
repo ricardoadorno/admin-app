@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env: aws
+    environment: aws
 
     steps:
       - name: 📥 Checkout do código
