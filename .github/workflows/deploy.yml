@@ -1,4 +1,4 @@
-name: Deploy Node.js App to AWS EC2 using AWS CLI
+name: Deploy Node.js App to AWS EC2
 
 on:
   push:
@@ -13,24 +13,23 @@ jobs:
       - name: 📥 Checkout do código
         uses: actions/checkout@v3
 
-      - name: 🔐 Configurar AWS CLI
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: 🚀 Conectar na EC2 e atualizar o container
+        uses: appleboy/ssh-action@v0.1.10
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            echo "🔄 Parando container antigo..."
+            docker stop admin-app-container || true
+            docker rm admin-app-container || true
 
-      - name: 🚀 Deploy na EC2 via AWS SSM
-        run: |
-          aws ssm send-command \
-            --document-name "AWS-RunShellScript" \
-            --targets "Key=instanceids,Values=${{ secrets.EC2_INSTANCE_ID }}" \
-            --parameters 'commands=[
-              "cd /admin-app",
-              "git pull origin main",
-              "docker stop admin-app-container || true",
-              "docker rm admin-app-container || true",
-              "docker build -t app-container:latest .",
-              "docker run -d --name admin-app-container -p 3000:3000 admin-app:latest"
-            ]' \
-            --region ${{ secrets.AWS_REGION }}
+            echo "🧹 Removendo imagem antiga..."
+            docker rmi admin-app:latest || true
+
+            echo "📦 Build da nova imagem..."
+            cd /path/to/your/app
+            docker build -t admin-app:latest .
+
+            echo "🚀 Subindo novo container..."
+            docker run -d --name admin-app-container -p 3000:3000 admin-app:latest
